@@ -158,6 +158,55 @@ Evaluation focus areas:
 - Prompt-injection resistance.
 - Local Ollama vs Railway Gemini provider parity.
 
+## Testing Strategy
+
+Unit tests use `pytest` with `pytest-mock` for the minimum checks needed to keep the RAG app safe and maintainable.
+
+No unit test should make live calls to Gemini, Ollama, ChromaDB, Guardrails AI, LangWatch, Langfuse, Phoenix, or other external services. These integrations should be mocked so the unit suite is fast, deterministic, and safe to run locally or in CI.
+
+Minimal test layout:
+
+```text
+tests/
+  unit/
+    test_config.py
+    test_text_splitter.py
+    test_haystack_guards.py
+    test_llm.py
+    test_rag.py
+  fixtures/
+    retrieved_docs.json
+```
+
+Required unit coverage:
+
+- Configuration defaults and LLM provider switching.
+- Chunk size and overlap behavior.
+- Haystack RAG guard behavior for prompt injection and weak retrieval.
+- LLM provider selection for Ollama and Gemini with mocked calls.
+- RAG fallback behavior when no useful context is retrieved.
+
+Recommended dev dependencies:
+
+```toml
+[dependency-groups]
+dev = [
+    "pytest",
+    "pytest-mock",
+]
+```
+
+Optional HTTP mocking dependencies can be added after implementation details are known:
+
+- `responses` if provider clients use `requests`.
+- `respx` if provider clients use `httpx`.
+
+Default test command:
+
+```powershell
+uv run pytest
+```
+
 ## Railway Deployment
 
 Railway should use a volume for the ChromaDB index.

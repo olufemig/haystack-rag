@@ -1,0 +1,22 @@
+[project]
+name = "haystack-rag"
+version = "0.1.0"
+requires-python = ">=3.11,<3.13"
+dependencies = [
+    "chainlit",
+    "chroma-haystack",
+    "chromadb",
+    "google-genai",
+    "guardrails-ai",
+    "haystack-ai>=2.30.0",
+    "langwatch",
+    "pypdf",
+    "python-dotenv",
+    "requests",
+]
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "pytest-mock",
+]

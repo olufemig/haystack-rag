@@ -16,6 +16,12 @@ This roadmap reflects the current implementation plan for the Haystack RAG chatb
   - `pypdf`
   - `python-dotenv`
   - `requests`
+- Add dev dependencies:
+  - `pytest`
+  - `pytest-mock`
+- Add optional HTTP mocking dependency after implementation details are known:
+  - `responses` if using `requests`
+  - `respx` if using `httpx`
 - Add `.gitignore`.
 - Add `.env.example`.
 - Add base `README.md`.
@@ -146,7 +152,42 @@ Question -> QueryGuard -> Gemini query embedding -> Chroma retrieval
   - prompt-injection resistance.
   - provider parity between local Ollama and Railway Gemini.
 
-## Phase 10: Railway Deployment
+## Phase 10: Minimal Unit Testing
+
+- Create the minimal test folder structure:
+
+```text
+tests/
+  unit/
+    test_config.py
+    test_text_splitter.py
+    test_haystack_guards.py
+    test_llm.py
+    test_rag.py
+  fixtures/
+    retrieved_docs.json
+```
+
+- Use `pytest` as the test runner.
+- Use `pytest-mock` to mock external services.
+- Do not make live Gemini API calls in unit tests.
+- Do not call a live Ollama server in unit tests.
+- Do not require a live ChromaDB index in unit tests.
+- Do not call Guardrails AI, LangWatch, Langfuse, Phoenix, or other observability services in unit tests.
+- Cover only the core behavior needed for confidence:
+  - configuration defaults and LLM provider switching.
+  - chunk size and overlap behavior.
+  - prompt-injection blocking.
+  - weak retrieval fallback.
+  - LLM provider selection for Ollama and Gemini with mocked calls.
+  - RAG fallback behavior when no useful context is retrieved.
+- Run tests with:
+
+```powershell
+uv run pytest
+```
+
+## Phase 11: Railway Deployment
 
 - Use a Railway volume mounted at `/data`.
 - Store ChromaDB at `/data/chroma`.
@@ -172,7 +213,7 @@ uv run chainlit run app.py --host 0.0.0.0 --port $PORT
 - Ensure the ChromaDB index is copied to the persistent disk before demo use.
 - Alternatively, run ingestion once in Railway with the PDF files available in the deployment environment.
 
-## Phase 11: Verification
+## Phase 12: Verification
 
 - Run dependency sync:
 
@@ -184,6 +225,12 @@ uv sync
 
 ```powershell
 uv run python -m compileall app.py ingest.py src
+```
+
+- Run unit tests:
+
+```powershell
+uv run pytest
 ```
 
 - Ingest sample PDFs if available:
