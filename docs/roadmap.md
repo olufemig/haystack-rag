@@ -16,6 +16,7 @@ This roadmap reflects the current implementation plan for the Haystack RAG chatb
   - `pypdf`
   - `python-dotenv`
   - `requests`
+  - `sentence-transformers`
 - Add dev dependencies:
   - `pytest`
   - `pytest-mock`
@@ -34,7 +35,7 @@ This roadmap reflects the current implementation plan for the Haystack RAG chatb
 - Include settings for:
   - ChromaDB path and collection.
   - Gemini API key.
-  - Gemini embedding model.
+  - local SentenceTransformers embedding model.
   - LLM provider.
   - Ollama base URL and model.
   - Gemini LLM model.
@@ -55,7 +56,7 @@ uv run python ingest.py --pdf-dir ./pdfs --reset
 - Extract text page by page.
 - Skip empty pages safely.
 - Split page text into overlapping chunks.
-- Embed chunks with Gemini `gemini-embedding-001`.
+- Embed chunks with local SentenceTransformers `BAAI/bge-small-en-v1.5`.
 - Persist chunks to ChromaDB through Haystack/Chroma.
 - Store metadata for citations:
   - `source`
@@ -66,7 +67,7 @@ uv run python ingest.py --pdf-dir ./pdfs --reset
 ## Phase 4: Embedding And Vector Store Layer
 
 - Create `src/embeddings.py`.
-- Wrap Gemini `gemini-embedding-001` for document and query embeddings.
+- Wrap SentenceTransformers `BAAI/bge-small-en-v1.5` for document and query embeddings.
 - Create `src/document_store.py`.
 - Centralize ChromaDB persistent store setup.
 - Ensure ingestion and retrieval use the same collection and embedding dimensions.
@@ -77,7 +78,7 @@ uv run python ingest.py --pdf-dir ./pdfs --reset
 - Build a Haystack-based retrieval flow:
 
 ```text
-Question -> QueryGuard -> Gemini query embedding -> Chroma retrieval
+Question -> QueryGuard -> BGE query embedding -> Chroma retrieval
          -> RetrievalGuard -> ContextBuilder -> LLM provider
          -> Guardrails AI validation -> Answer with sources
 ```
@@ -196,8 +197,8 @@ uv run pytest
 ```env
 CHROMA_PATH=/data/chroma
 CHROMA_COLLECTION=pdf_knowledge_base
+EMBEDDING_MODEL=BAAI/bge-small-en-v1.5
 GEMINI_API_KEY=your_key_here
-GEMINI_EMBEDDING_MODEL=gemini-embedding-001
 LLM_PROVIDER=gemini
 GEMINI_MODEL=gemini-2.5-flash-lite
 LANGWATCH_ENABLED=true
@@ -212,6 +213,7 @@ uv run chainlit run app.py --host 0.0.0.0 --port $PORT
 
 - Ensure the ChromaDB index is copied to the persistent disk before demo use.
 - Alternatively, run ingestion once in Railway with the PDF files available in the deployment environment.
+- Ensure `BAAI/bge-small-en-v1.5` is available in the Railway runtime if query embeddings are generated there.
 
 ## Phase 12: Verification
 

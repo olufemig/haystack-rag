@@ -7,7 +7,7 @@ This project is a read-only PDF RAG chatbot. PDFs are ingested outside the user 
 - Orchestration: Haystack pipelines.
 - Vector database: persisted local ChromaDB.
 - User interface: Chainlit question-only chatbot.
-- Embeddings: Gemini `gemini-embedding-001` for both ingestion and query embeddings.
+- Embeddings: local SentenceTransformers model `BAAI/bge-small-en-v1.5` for both ingestion and query embeddings.
 - Local LLM: Ollama `qwen2.5-coder:7b` for local testing.
 - Deployed LLM: Gemini 2.5 Flash-Lite on Railway.
 - RAG logic guardrails: custom Haystack components.
@@ -18,14 +18,14 @@ This project is a read-only PDF RAG chatbot. PDFs are ingested outside the user 
 
 ```text
 Ingestion:
-PDFs -> Haystack ingestion pipeline -> chunking -> gemini-embedding-001 -> ChromaDB
+PDFs -> Haystack ingestion pipeline -> chunking -> BAAI/bge-small-en-v1.5 -> ChromaDB
 
 Local chatbot:
-Question -> gemini-embedding-001 -> ChromaDB retrieval -> Haystack RAG guards
+Question -> BAAI/bge-small-en-v1.5 -> ChromaDB retrieval -> Haystack RAG guards
          -> Ollama qwen2.5-coder:7b -> Guardrails AI -> Chainlit response
 
 Railway chatbot:
-Question -> gemini-embedding-001 -> ChromaDB retrieval -> Haystack RAG guards
+Question -> BAAI/bge-small-en-v1.5 -> ChromaDB retrieval -> Haystack RAG guards
          -> Gemini 2.5 Flash-Lite -> Guardrails AI -> Chainlit response
 ```
 
@@ -35,8 +35,9 @@ Question -> gemini-embedding-001 -> ChromaDB retrieval -> Haystack RAG guards
 - Ingestion will be handled by a separate CLI script.
 - Demo documents are fixed for the deployed demo.
 - Answers must be based only on retrieved PDF context.
-- The same embedding model is used locally and in production so one ChromaDB index can be reused.
-- `gemini-embedding-001` is a hosted Gemini API model, so local development still requires `GEMINI_API_KEY` and internet access for embeddings.
+- The same local embedding model is used locally and in production so one ChromaDB index can be reused.
+- `BAAI/bge-small-en-v1.5` runs through SentenceTransformers, so embeddings do not require Gemini API calls.
+- The embedding model must be available in the runtime environment. It can be downloaded at first run from Hugging Face or pre-cached/bundled for deployment.
 - Ollama is used only for local answer generation.
 - Railway uses Gemini for answer generation and does not run Ollama.
 
@@ -59,7 +60,7 @@ src/text_splitter.py
 
 ## Ingestion Pipeline
 
-The ingestion script will read PDFs from a folder, extract page text, split text into chunks, embed chunks with Gemini `gemini-embedding-001`, and persist them in ChromaDB.
+The ingestion script will read PDFs from a folder, extract page text, split text into chunks, embed chunks with local SentenceTransformers `BAAI/bge-small-en-v1.5`, and persist them in ChromaDB.
 
 Default command:
 
@@ -79,7 +80,7 @@ Each chunk should include citation metadata:
 
 ## Retrieval And Generation
 
-The RAG pipeline embeds the user question with Gemini `gemini-embedding-001`, retrieves matching chunks from ChromaDB, applies retrieval guardrails, builds a grounded prompt, and calls the configured LLM provider.
+The RAG pipeline embeds the user question with local SentenceTransformers `BAAI/bge-small-en-v1.5`, retrieves matching chunks from ChromaDB, applies retrieval guardrails, builds a grounded prompt, and calls the configured LLM provider.
 
 LLM provider selection is environment-driven:
 
@@ -216,8 +217,8 @@ Recommended production environment:
 ```env
 CHROMA_PATH=/data/chroma
 CHROMA_COLLECTION=pdf_knowledge_base
+EMBEDDING_MODEL=BAAI/bge-small-en-v1.5
 GEMINI_API_KEY=your_key_here
-GEMINI_EMBEDDING_MODEL=gemini-embedding-001
 LLM_PROVIDER=gemini
 GEMINI_MODEL=gemini-2.5-flash-lite
 LANGWATCH_ENABLED=true
@@ -230,4 +231,4 @@ Start command:
 uv run chainlit run app.py --host 0.0.0.0 --port $PORT
 ```
 
-The ChromaDB index should be copied to the Railway volume before demo use, or ingestion should be run once with the PDF files available in the deployment environment.
+The ChromaDB index should be copied to the Railway volume before demo use, or ingestion should be run once with the PDF files available in the deployment environment. If ingestion or query embeddings run on Railway, the SentenceTransformers model must also be available there.
