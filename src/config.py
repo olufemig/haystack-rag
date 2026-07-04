@@ -14,6 +14,7 @@ class Settings:
     chunk_overlap: int
     top_k: int
     min_relevance_score: float
+    max_question_chars: int
     max_context_chars: int
     llm_provider: str
     ollama_base_url: str
@@ -33,6 +34,7 @@ def load_settings() -> Settings:
         chunk_overlap=int(os.getenv("CHUNK_OVERLAP", "100")),
         top_k=int(os.getenv("TOP_K", "5")),
         min_relevance_score=float(os.getenv("MIN_RELEVANCE_SCORE", "0.7")),
+        max_question_chars=int(os.getenv("MAX_QUESTION_CHARS", "1000")),
         max_context_chars=int(os.getenv("MAX_CONTEXT_CHARS", "12000")),
         llm_provider=os.getenv("LLM_PROVIDER", "ollama").lower(),
         ollama_base_url=os.getenv("OLLAMA_BASE_URL", "http://localhost:11434"),

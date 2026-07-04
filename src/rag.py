@@ -6,6 +6,7 @@ from haystack_integrations.components.retrievers.chroma import ChromaEmbeddingRe
 from src.config import Settings, load_settings
 from src.document_store import get_document_store
 from src.embeddings import embed_text
+from src.guardrails import build_pdf_only_prompt, validate_question
 
 
 FALLBACK_ANSWER = "I don't know based on the available documents."
@@ -24,12 +25,14 @@ class RetrievalResult:
     documents: list[Document]
     sources: list[Source]
     used_fallback: bool
+    prompt: str | None = None
 
 
 def retrieve(question: str, settings: Settings | None = None) -> RetrievalResult:
     settings = settings or load_settings()
-    question = question.strip()
-    if not question:
+    try:
+        question = validate_question(question, settings)
+    except ValueError:
         return _fallback()
 
     document_store = get_document_store(settings)
@@ -55,6 +58,7 @@ def retrieve(question: str, settings: Settings | None = None) -> RetrievalResult
         documents=documents,
         sources=sources,
         used_fallback=False,
+        prompt=build_pdf_only_prompt(question, context),
     )
 
 
