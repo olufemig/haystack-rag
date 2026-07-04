@@ -33,7 +33,7 @@ def load_settings() -> Settings:
         chunk_size=int(os.getenv("CHUNK_SIZE", "2000")),
         chunk_overlap=int(os.getenv("CHUNK_OVERLAP", "100")),
         top_k=int(os.getenv("TOP_K", "5")),
-        min_relevance_score=float(os.getenv("MIN_RELEVANCE_SCORE", "0.7")),
+        min_relevance_score=float(os.getenv("MIN_RELEVANCE_SCORE", "0.6")),
         max_question_chars=int(os.getenv("MAX_QUESTION_CHARS", "1000")),
         max_context_chars=int(os.getenv("MAX_CONTEXT_CHARS", "12000")),
         llm_provider=os.getenv("LLM_PROVIDER", "ollama").lower(),

@@ -78,14 +78,14 @@ uv run python ingest.py --pdf-dir ./pdfs --reset
 - Build a Haystack-based retrieval flow:
 
 ```text
-Question -> QueryGuard -> BGE query embedding -> Chroma retrieval
-         -> RetrievalGuard -> ContextBuilder -> LLM provider
-         -> Guardrails AI validation -> Answer with sources
+Question -> app guardrails -> BGE query embedding -> Chroma retrieval
+         -> retrieval threshold -> grounded prompt -> LLM provider
+         -> answer only
 ```
 
 - Enforce PDF-only answers.
 - Return fallback when retrieval is weak or missing.
-- Include source citations in every supported answer.
+- Keep source metadata internally, but do not append source lists or citations to the final Chainlit answer.
 
 ## Phase 6: LLM Provider Layer
 
@@ -101,18 +101,17 @@ Question -> QueryGuard -> BGE query embedding -> Chroma retrieval
 
 ## Phase 7: Guardrails
 
-- Create `src/haystack_guards.py`.
-- Implement Haystack custom guard components for RAG logic:
+- Create `src/guardrails.py`.
+- Implement lightweight app guardrails for RAG logic:
   - query validation.
   - prompt injection blocking.
   - retrieval threshold checks.
   - context length limits.
   - fallback routing.
-- Create `src/guardrails.py`.
-- Use Guardrails AI for input/output validation.
+- Keep Guardrails AI as an installed dependency for later output validation if needed.
 - Enforce the final answer contract:
   - answer from PDF context only.
-  - cite sources when answering.
+  - do not append sources/citations to final answers.
   - use exact fallback when unsupported.
   - do not leak prompts or internal instructions.
 
@@ -125,8 +124,8 @@ Question -> QueryGuard -> BGE query embedding -> Chroma retrieval
 - On each message:
   - validate question.
   - run RAG.
-  - validate answer.
-  - render answer and sources.
+  - generate an answer from the grounded prompt.
+  - render answer only.
   - show clear user-facing errors for missing index or unavailable model provider.
 
 ## Phase 9: Observability And Evaluation
@@ -141,14 +140,14 @@ Question -> QueryGuard -> BGE query embedding -> Chroma retrieval
   - retrieved documents and scores.
   - guardrail decisions.
   - final answer.
-  - citations.
+  - source metadata if observability is later wired in.
   - errors and latency.
 - Add an optional evaluation dataset later at `eval/questions.jsonl`.
 - Evaluate:
   - faithfulness.
   - context relevance.
   - answer relevance.
-  - citation correctness.
+  - source-grounding correctness.
   - fallback correctness.
   - prompt-injection resistance.
   - provider parity between local Ollama and Railway Gemini.
@@ -254,7 +253,7 @@ uv run chainlit run app.py -w
   - overly long question.
   - missing ChromaDB index.
   - Ollama unavailable locally.
-  - citations shown with filename and page.
+  - final answers do not append source lists, filenames, pages, or citations.
   - LangWatch traces when enabled.
 
 ## Deferred Work
