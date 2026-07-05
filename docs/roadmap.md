@@ -11,12 +11,10 @@ This roadmap reflects the current implementation plan for the Haystack RAG chatb
   - `chromadb`
   - `chainlit`
   - `google-genai`
-  - `guardrails-ai`
-  - `langwatch`
-  - `pypdf`
+  - `guardrails-ai` for optional future output validation
+  - `langwatch` for optional future observability
   - `python-dotenv`
   - `requests`
-  - `sentence-transformers`
 - Add dev dependencies:
   - `pytest`
   - `pytest-mock`
@@ -35,7 +33,7 @@ This roadmap reflects the current implementation plan for the Haystack RAG chatb
 - Include settings for:
   - ChromaDB path and collection.
   - Gemini API key.
-  - local SentenceTransformers embedding model.
+  - Gemini embedding model.
   - LLM provider.
   - Ollama base URL and model.
   - Gemini LLM model.
@@ -49,25 +47,25 @@ This roadmap reflects the current implementation plan for the Haystack RAG chatb
 - Default command:
 
 ```powershell
-uv run python ingest.py --pdf-dir ./pdfs --reset
+uv run python ingest.py --reset
 ```
 
-- Create PDF loading utilities.
-- Extract text page by page.
-- Skip empty pages safely.
-- Split page text into overlapping chunks.
-- Embed chunks with local SentenceTransformers `BAAI/bge-small-en-v1.5`.
+- Create wiki loading utilities.
+- Fetch the Arsenal FC Wikipedia page.
+- Extract structured readable article text from paragraphs, lists, captions, and table cells.
+- Split article text into overlapping chunks.
+- Embed chunks with Gemini `gemini-embedding-001`.
 - Persist chunks to ChromaDB through Haystack/Chroma.
-- Store metadata for citations:
+- Store metadata for retrieval/debugging:
   - `source`
-  - `page`
+  - `title`
   - `chunk_id`
 - Print an ingestion summary.
 
 ## Phase 4: Embedding And Vector Store Layer
 
 - Create `src/embeddings.py`.
-- Wrap SentenceTransformers `BAAI/bge-small-en-v1.5` for document and query embeddings.
+- Wrap Gemini `gemini-embedding-001` for document and query embeddings.
 - Create `src/document_store.py`.
 - Centralize ChromaDB persistent store setup.
 - Ensure ingestion and retrieval use the same collection and embedding dimensions.
@@ -78,14 +76,14 @@ uv run python ingest.py --pdf-dir ./pdfs --reset
 - Build a Haystack-based retrieval flow:
 
 ```text
-Question -> app guardrails -> BGE query embedding -> Chroma retrieval
+Question -> app guardrails -> Gemini query embedding -> Chroma retrieval
          -> retrieval threshold -> grounded prompt -> LLM provider
-         -> answer only
+         -> answer with source metadata
 ```
 
-- Enforce PDF-only answers.
+- Enforce Arsenal FC wiki-only answers.
 - Return fallback when retrieval is weak or missing.
-- Keep source metadata internally, but do not append source lists or citations to the final Chainlit answer.
+- Keep source metadata and append the retrieved wiki source below Chainlit answers.
 
 ## Phase 6: LLM Provider Layer
 
@@ -110,8 +108,8 @@ Question -> app guardrails -> BGE query embedding -> Chroma retrieval
   - fallback routing.
 - Keep Guardrails AI as an installed dependency for later output validation if needed.
 - Enforce the final answer contract:
-  - answer from PDF context only.
-  - do not append sources/citations to final answers.
+  - answer from retrieved Arsenal FC wiki context only.
+  - keep answer generation grounded and let the UI append source metadata separately.
   - use exact fallback when unsupported.
   - do not leak prompts or internal instructions.
 
@@ -119,13 +117,13 @@ Question -> app guardrails -> BGE query embedding -> Chroma retrieval
 
 - Create `app.py`.
 - Make the UI question-only.
-- Do not support PDF uploads in the UI.
+- Do not support uploads or ingestion in the UI.
 - On startup, check that ChromaDB exists and has data.
 - On each message:
   - validate question.
   - run RAG.
   - generate an answer from the grounded prompt.
-  - render answer only.
+  - render answer plus retrieved wiki source.
   - show clear user-facing errors for missing index or unavailable model provider.
 
 ## Phase 9: Observability And Evaluation
@@ -161,7 +159,7 @@ tests/
   unit/
     test_config.py
     test_text_splitter.py
-    test_haystack_guards.py
+    test_guardrails.py
     test_llm.py
     test_rag.py
   fixtures/
@@ -195,8 +193,8 @@ uv run pytest
 
 ```env
 CHROMA_PATH=/data/chroma
-CHROMA_COLLECTION=pdf_knowledge_base
-EMBEDDING_MODEL=BAAI/bge-small-en-v1.5
+CHROMA_COLLECTION=arsenal_wiki
+EMBEDDING_MODEL=gemini-embedding-001
 GEMINI_API_KEY=your_key_here
 LLM_PROVIDER=gemini
 GEMINI_MODEL=gemini-2.5-flash-lite
@@ -211,8 +209,8 @@ uv run chainlit run app.py --host 0.0.0.0 --port $PORT
 ```
 
 - Ensure the ChromaDB index is copied to the persistent disk before demo use.
-- Alternatively, run ingestion once in Railway with the PDF files available in the deployment environment.
-- Ensure `BAAI/bge-small-en-v1.5` is available in the Railway runtime if query embeddings are generated there.
+- Alternatively, run ingestion once in Railway.
+- Ensure `GEMINI_API_KEY` is set because both ingestion and query embeddings use Gemini.
 
 ## Phase 12: Verification
 
@@ -234,10 +232,10 @@ uv run python -m compileall app.py ingest.py src
 uv run pytest
 ```
 
-- Ingest sample PDFs if available:
+- Ingest the Arsenal FC Wikipedia source:
 
 ```powershell
-uv run python ingest.py --pdf-dir ./pdfs --reset
+uv run python ingest.py --reset
 ```
 
 - Start local app:
@@ -247,13 +245,13 @@ uv run chainlit run app.py -w
 ```
 
 - Test:
-  - answerable PDF question.
+  - answerable Arsenal FC question.
   - unanswerable question.
   - prompt-injection attempt.
   - overly long question.
   - missing ChromaDB index.
   - Ollama unavailable locally.
-  - final answers do not append source lists, filenames, pages, or citations.
+  - answers include the retrieved wiki source section.
   - LangWatch traces when enabled.
 
 ## Deferred Work

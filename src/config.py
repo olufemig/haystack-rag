@@ -10,6 +10,8 @@ class Settings:
     chroma_collection: str
     gemini_api_key: str | None
     embedding_model: str
+    wiki_url: str
+    wiki_title: str
     chunk_size: int
     chunk_overlap: int
     top_k: int
@@ -27,9 +29,11 @@ def load_settings() -> Settings:
 
     return Settings(
         chroma_path=os.getenv("CHROMA_PATH", "./data/chroma"),
-        chroma_collection=os.getenv("CHROMA_COLLECTION", "pdf_knowledge_base"),
+        chroma_collection=os.getenv("CHROMA_COLLECTION", "arsenal_wiki"),
         gemini_api_key=os.getenv("GEMINI_API_KEY"),
-        embedding_model=os.getenv("EMBEDDING_MODEL", "BAAI/bge-small-en-v1.5"),
+        embedding_model=os.getenv("EMBEDDING_MODEL", "gemini-embedding-001"),
+        wiki_url=os.getenv("WIKI_URL", "https://en.wikipedia.org/wiki/Arsenal_F.C."),
+        wiki_title=os.getenv("WIKI_TITLE", "Arsenal F.C."),
         chunk_size=int(os.getenv("CHUNK_SIZE", "2000")),
         chunk_overlap=int(os.getenv("CHUNK_OVERLAP", "100")),
         top_k=int(os.getenv("TOP_K", "5")),

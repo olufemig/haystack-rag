@@ -1,17 +1,18 @@
 from dataclasses import dataclass
+import re
 
 from haystack import Document
 
-from src.pdf_loader import PdfPage
+from src.wiki_loader import WikiSource
 
 
 @dataclass(frozen=True)
 class ChunkStats:
-    pages: int
+    sources: int
     chunks: int
 
 
-def split_pages(pages: list[PdfPage], chunk_size: int, chunk_overlap: int) -> tuple[list[Document], ChunkStats]:
+def split_wiki_source(source: WikiSource, chunk_size: int, chunk_overlap: int) -> tuple[list[Document], ChunkStats]:
     if chunk_size <= 0:
         raise ValueError("chunk_size must be greater than 0")
     if chunk_overlap < 0:
@@ -19,28 +20,32 @@ def split_pages(pages: list[PdfPage], chunk_size: int, chunk_overlap: int) -> tu
     if chunk_overlap >= chunk_size:
         raise ValueError("chunk_overlap must be smaller than chunk_size")
 
+    text = re.sub(r"\s+", " ", source.text).strip()
     documents: list[Document] = []
     step = chunk_size - chunk_overlap
+    slug = _slugify(source.title)
 
-    for page in pages:
-        chunk_number = 1
-        for start in range(0, len(page.text), step):
-            content = page.text[start : start + chunk_size].strip()
-            if not content:
-                continue
+    for chunk_number, start in enumerate(range(0, len(text), step), start=1):
+        content = text[start : start + chunk_size].strip()
+        if not content:
+            continue
 
-            chunk_id = f"{page.source}-p{page.page}-c{chunk_number}"
-            documents.append(
-                Document(
-                    id=chunk_id,
-                    content=content,
-                    meta={
-                        "source": page.source,
-                        "page": page.page,
-                        "chunk_id": chunk_id,
-                    },
-                )
+        chunk_id = f"{slug}-wiki-c{chunk_number}"
+        documents.append(
+            Document(
+                id=chunk_id,
+                content=content,
+                meta={
+                    "source": source.url,
+                    "title": source.title,
+                    "chunk_id": chunk_id,
+                },
             )
-            chunk_number += 1
+        )
 
-    return documents, ChunkStats(pages=len(pages), chunks=len(documents))
+    return documents, ChunkStats(sources=1, chunks=len(documents))
+
+
+def _slugify(value: str) -> str:
+    slug = re.sub(r"[^a-z0-9]+", "-", value.lower()).strip("-")
+    return slug or "wiki"

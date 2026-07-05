@@ -6,7 +6,7 @@ from haystack_integrations.components.retrievers.chroma import ChromaEmbeddingRe
 from src.config import Settings, load_settings
 from src.document_store import get_document_store
 from src.embeddings import embed_text
-from src.guardrails import build_pdf_only_prompt, validate_question
+from src.guardrails import build_grounded_prompt, validate_question
 
 
 FALLBACK_ANSWER = "I don't know based on the available documents."
@@ -15,7 +15,7 @@ FALLBACK_ANSWER = "I don't know based on the available documents."
 @dataclass(frozen=True)
 class Source:
     source: str
-    page: int | None
+    title: str | None
     score: float | None
 
 
@@ -58,7 +58,7 @@ def retrieve(question: str, settings: Settings | None = None) -> RetrievalResult
         documents=documents,
         sources=sources,
         used_fallback=False,
-        prompt=build_pdf_only_prompt(question, context),
+        prompt=build_grounded_prompt(question, context),
     )
 
 
@@ -83,12 +83,12 @@ def _build_context(documents: list[Document], max_chars: int) -> str:
 
     for index, document in enumerate(documents, start=1):
         source = document.meta.get("source", "unknown")
-        page = document.meta.get("page", "unknown")
+        title = document.meta.get("title", "unknown")
         content = (document.content or "").strip()
         if not content:
             continue
 
-        chunk = f"[{index}] Source: {source}, page {page}\n{content}"
+        chunk = f"[{index}] Source: {source}, title: {title}\n{content}"
         remaining = max_chars - used_chars
         if remaining <= 0:
             break
@@ -105,20 +105,20 @@ def _build_context(documents: list[Document], max_chars: int) -> str:
 
 
 def _sources_from_documents(documents: list[Document]) -> list[Source]:
-    seen: set[tuple[str, int | None]] = set()
+    seen: set[tuple[str, str | None]] = set()
     sources: list[Source] = []
 
     for document in documents:
         source = str(document.meta.get("source", "unknown"))
-        page = document.meta.get("page")
-        if not isinstance(page, int):
-            page = None
-        key = (source, page)
+        title = document.meta.get("title")
+        if not isinstance(title, str):
+            title = None
+        key = (source, title)
         if key in seen:
             continue
 
         seen.add(key)
-        sources.append(Source(source=source, page=page, score=_relevance_score(document)))
+        sources.append(Source(source=source, title=title, score=_relevance_score(document)))
 
     return sources
 

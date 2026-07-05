@@ -10,10 +10,8 @@ dependencies = [
     "guardrails-ai",
     "haystack-ai>=2.30.0",
     "langwatch",
-    "pypdf",
     "python-dotenv",
     "requests",
-    "sentence-transformers",
 ]
 
 [dependency-groups]
